@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>优化布局的主站区域与子站关系图</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c1e30, #1a3a5f);
+            color: #e0f7fa;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 10px rgba(0, 150, 200, 0.6);
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            opacity: 0.85;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .chart-container {
+            flex: 1 1 800px;
+            min-height: 600px;
+            background: rgba(16, 42, 67, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 12px 35px rgba(0, 20, 40, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(64, 169, 255, 0.2);
+            transition: all 0.4s ease;
+            position: relative;
+        }
+
+        .chart-container:hover {
+            box-shadow: 0 15px 40px rgba(0, 100, 200, 0.4);
+            border-color: rgba(64, 169, 255, 0.35);
+        }
+
+        #main-chart {
+            width: 100%;
+            height: 560px;
+        }
+
+        .info-panel {
+            flex: 0 0 300px;
+            background: rgba(16, 42, 67, 0.7);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 12px 35px rgba(0, 20, 40, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(64, 169, 255, 0.2);
+            transition: all 0.4s ease;
+        }
+
+        .info-panel:hover {
+            box-shadow: 0 15px 40px rgba(0, 100, 200, 0.4);
+            border-color: rgba(64, 169, 255, 0.35);
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(64, 169, 255, 0.3);
+        }
+
+        .panel-title h2 {
+            font-size: 1.5rem;
+            margin-left: 10px;
+            background: linear-gradient(to right, #00d2ff, #3a7bd5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .icon-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(0, 210, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: rgba(0, 120, 215, 0.15);
+            border-radius: 12px;
+            padding: 20px 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(64, 169, 255, 0.15);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+        }
+
+        .stat-card:nth-child(1)::before {
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+        }
+
+        .stat-card:nth-child(2)::before {
+            background: linear-gradient(90deg, #00c853, #64dd17);
+        }
+
+        .stat-card:nth-child(3)::before {
+            background: linear-gradient(90deg, #ff6d00, #ffab00);
+        }
+
+        .stat-card:nth-child(4)::before {
+            background: linear-gradient(90deg, #d50000, #ff5252);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            background: rgba(0, 120, 215, 0.25);
+            box-shadow: 0 8px 20px rgba(0, 60, 120, 0.3);
+        }
+
+        .stat-label {
+            font-size: 1rem;
+            opacity: 0.85;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 2.4rem;
+            font-weight: bold;
+            margin: 5px 0;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .main-sites-count {
+            color: #4facfe;
+        }
+
+        .sub-sites-count {
+            color: #00c853;
+        }
+
+        .active-count {
+            color: #64dd17;
+        }
+
+        .inactive-count {
+            color: #ff6d00;
+        }
+
+        .status-list {
+            margin-top: 25px;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .status-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .status-list::-webkit-scrollbar-thumb {
+            background: rgba(64, 169, 255, 0.5);
+            border-radius: 3px;
+        }
+
+        .status-item {
+            padding: 15px;
+            margin-bottom: 12px;
+            background: rgba(0, 60, 120, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 1px solid rgba(64, 169, 255, 0.1);
+        }
+
+        .status-item:hover {
+            background: rgba(0, 100, 200, 0.3);
+            transform: translateX(5px);
+            border-color: rgba(64, 169, 255, 0.3);
+        }
+
+        .status-indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 15px;
+        }
+
+        .status-name {
+            flex-grow: 1;
+            font-weight: 500;
+            font-size: 1.05rem;
+        }
+
+        .site-type {
+            background: rgba(0, 150, 255, 0.2);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.05rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 114, 255, 0.3);
+            min-width: 180px;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 114, 255, 0.4);
+        }
+
+        .btn.secondary {
+            background: linear-gradient(135deg, #ff7e5f, #feb47b);
+        }
+
+        .btn.tertiary {
+            background: linear-gradient(135deg, #7b4397, #dc2430);
+        }
+
+        .btn i {
+            font-size: 1.3rem;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            opacity: 0.7;
+            font-size: 0.95rem;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .main-region {
+            position: absolute;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: 120px;
+            border: 2px solid rgba(84, 112, 198, 0.5);
+            border-radius: 10px;
+            background: rgba(84, 112, 198, 0.1);
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+        }
+
+        .sub-region {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: auto;
+            min-height: 120px;
+            border: 2px solid rgba(76, 175, 80, 0.5);
+            border-radius: 10px;
+            background: rgba(76, 175, 80, 0.1);
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: rgba(255, 255, 255, 0.8);
+            text-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard {
+                flex-direction: column;
+            }
+
+            .chart-container {
+                min-height: 500px;
+            }
+
+            .info-panel {
+                flex: 1 1 auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+
+            .subtitle {
+                font-size: 1.05rem;
+            }
+
+            .chart-container {
+                min-height: 400px;
+                padding: 15px;
+            }
+
+            .stat-value {
+                font-size: 2rem;
+            }
+
+            .btn {
+                padding: 12px 20px;
+                min-width: 160px;
+                font-size: 0.95rem;
+            }
+
+            .legend {
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" class="container">
+        <header>
+            <h1>优化布局的主站区域与子站关系图</h1>
+            <p class="subtitle">顶部为主站区域大矩形，底部为多行排列的子站区域，避免重叠问题</p>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #5470c6;"></div>
+                    <div>主站</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4caf50;"></div>
+                    <div>子站</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #64dd17;"></div>
+                    <div>活动连接</div>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff6d00;"></div>
+                    <div>非活动连接</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="dashboard">
+            <div class="chart-container">
+                <div id="main-chart"></div>
+                <!-- <div class="main-region">主站区域</div> -->
+                <!-- <div class="sub-region">子站区域</div> -->
+            </div>
+
+            <div class="info-panel">
+                <div class="panel-title">
+                    <div class="icon-box">📊</div>
+                    <h2>系统概览</h2>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">主站数量</div>
+                        <div class="stat-value main-sites-count">{{ mainSites.length }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">子站数量</div>
+                        <div class="stat-value sub-sites-count">{{ subSites.length }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">活动连接</div>
+                        <div class="stat-value active-count">{{ activeConnections }}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">非活动连接</div>
+                        <div class="stat-value inactive-count">{{ inactiveConnections }}</div>
+                    </div>
+                </div>
+
+                <div class="panel-title">
+                    <div class="icon-box">📋</div>
+                    <h2>站点列表</h2>
+                </div>
+                <div class="status-list">
+                    <div v-for="site in allSites" :key="site.id" class="status-item"
+                        @mouseenter="highlightSite(site.id)" @mouseleave="resetHighlight">
+                        <div class="status-indicator"
+                            :class="{'main-site': site.type === 'main', 'sub-site': site.type === 'sub'}"></div>
+                        <div class="status-name">{{ site.name }}</div>
+                        <div class="site-type">{{ site.type === 'main' ? '主站' : '子站' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" @click="addMainSite">
+                <i>+</i> 添加主站
+            </button>
+            <button class="btn secondary" @click="addSubSite">
+                <i>+</i> 添加子站
+            </button>
+            <button class="btn tertiary" @click="resetLayout">
+                <i>↻</i> 重置布局
+            </button>
+            <button class="btn" @click="randomizeConnections">
+                <i>🔄</i> 随机连接
+            </button>
+            <button class="btn" @click="addMultipleSubSites(5)">
+                <i>++</i> 添加5个子站
+            </button>
+        </div>
+
+        <div class="footer">
+            <p>基于 Vue.js 和 ECharts 实现 | 优化布局的主站区域与子站关系图</p>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                myChart: null,
+                mainSites: [],
+                subSites: [],
+                connections: [],
+                nextMainId: 1,
+                nextSubId: 1
+            },
+            computed: {
+                allSites() {
+                    return [...this.mainSites, ...this.subSites];
+                },
+                activeConnections() {
+                    return this.connections.filter(conn => conn.active).length;
+                },
+                inactiveConnections() {
+                    return this.connections.filter(conn => !conn.active).length;
+                }
+            },
+            mounted() {
+                this.initChart();
+                this.generateData(5, 15); // 初始生成5个主站和15个子站
+                window.addEventListener('resize', this.handleResize);
+            },
+            beforeDestroy() {
+                window.removeEventListener('resize', this.handleResize);
+            },
+            methods: {
+                initChart() {
+                    const chartDom = document.getElementById('main-chart');
+                    this.myChart = echarts.init(chartDom);
+
+                    const option = {
+                        tooltip: {
+                            trigger: 'item',
+                            formatter: (params) => {
+                                if (params.dataType === 'node') {
+                                    const node = params.data;
+                                    if (node.type === 'region') return `<b>${node.name}</b>`;
+                                    return `<b>${node.name}</b><br>类型: ${node.type === 'main' ? '主站' : '子站'}`;
+                                }
+                                return `${params.data.sourceName} → ${params.data.targetName}`;
+                            },
+                            backgroundColor: 'rgba(10, 25, 50, 0.9)',
+                            borderColor: '#47b8e0',
+                            textStyle: { color: '#fff' },
+                            extraCssText: 'box-shadow: 0 0 15px rgba(0, 200, 255, 0.5);'
+                        },
+                        animation: true,
+                        animationDuration: 1000,
+                        animationEasing: 'cubicOut',
+                        series: [{
+                            type: 'graph',
+                            layout: 'none', // 使用自定义布局
+                            draggable: false, // 禁用整体拖动
+                            roam: false,
+                            focusNodeAdjacency: false,
+                            edgeSymbol: ['none', 'arrow'],
+                            edgeSymbolSize: [0, 15],
+                            edgeLabel: {
+                                show: false
+                            },
+                            lineStyle: {
+                                width: 3,
+                                curveness: 0.1,
+                                opacity: 0.8,
+                                color: (params) => {
+                                    return params.data.active ? '#64dd17' : '#ff6d00';
+                                }
+                            },
+                            label: {
+                                show: true,
+                                position: 'inside',
+                                fontSize: 14,
+                                fontWeight: 'bold',
+                                color: '#fff'
+                            },
+                            emphasis: {
+                                scale: false,
+                                focus: 'none',
+                                // itemStyle: {
+                                //     borderWidth: 3,
+                                //     borderColor: '#fff',
+                                //     shadowBlur: 20,
+                                //     shadowColor: 'rgba(0, 200, 255, 0.8)'
+                                // },
+                                lineStyle: {
+                                    width: 5,
+                                    opacity: 1
+                                }
+                            }
+                        }]
+                    };
+
+                    this.myChart.setOption(option);
+
+                    // 点击事件
+                    this.myChart.on('click', (params) => {
+                        if (params.dataType === 'node') {
+                            this.myChart.dispatchAction({
+                                type: 'focusNodeAdjacency',
+                                seriesIndex: 0,
+                                dataIndex: params.dataIndex
+                            });
+                        }
+                    });
+                },
+
+                generateData(mainCount, subCount) {
+                    // 生成主站
+                    for (let i = 0; i < mainCount; i++) {
+                        this.mainSites.push(this.createMainSite());
+                    }
+
+                    // 生成子站
+                    for (let i = 0; i < subCount; i++) {
+                        this.subSites.push(this.createSubSite());
+                    }
+
+                    // 创建连接
+                    this.createConnections();
+
+                    // 计算位置
+                    this.calculatePositions();
+
+                    // 更新图表
+                    this.updateChart();
+                },
+
+                createMainSite() {
+                    const site = {
+                        id: `main${this.nextMainId}`,
+                        name: `主站 ${this.nextMainId}`,
+                        type: 'main',
+                        symbol: 'rect',
+                        symbolSize: [120, 50],
+                        itemStyle: {
+                            color: '#5470c6',
+                            borderWidth: 2,
+                            borderColor: '#a0c0ff',
+                            shadowColor: 'rgba(0, 150, 255, 0.5)',
+                            shadowBlur: 15
+                        },
+                        label: {
+                            show: true,
+                            position: 'inside',
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                            color: '#fff'
+                        },
+                        fixed: true // 主站不能拖动
+                    };
+
+                    this.nextMainId++;
+                    return site;
+                },
+
+                createSubSite() {
+                    const site = {
+                        id: `sub${this.nextSubId}`,
+                        name: `子站 ${this.nextSubId}`,
+                        type: 'sub',
+                        symbol: 'rect',
+                        symbolSize: [110, 50],
+                        itemStyle: {
+                            color: '#4caf50',
+                            borderWidth: 2,
+                            borderColor: '#a5d6a7',
+                            shadowColor: 'rgba(100, 221, 23, 0.3)',
+                            shadowBlur: 10
+                        },
+                        label: {
+                            show: true,
+                            position: 'inside',
+                            fontSize: 12,
+                            fontWeight: 'bold',
+                            color: '#fff'
+                        },
+                        draggable: true // 子站可以拖动
+                    };
+
+                    this.nextSubId++;
+                    return site;
+                },
+
+                createConnections() {
+                    this.connections = [];
+
+                    // 每个子站连接到主站区域（使用一个虚拟的主站区域节点）
+                    this.subSites.forEach(subSite => {
+                        this.connections.push({
+                            source: 'main-region', // 虚拟的主站区域ID
+                            target: subSite.id,
+                            sourceName: '主站区域',
+                            targetName: subSite.name,
+                            active: Math.random() > 0.3 // 70%的连接是活动的
+                        });
+                    });
+                },
+
+                calculatePositions() {
+                    if (!this.myChart) return;
+
+                    const containerWidth = this.myChart.getWidth();
+                    const containerHeight = this.myChart.getHeight();
+
+                    // 主站区域位置（顶部大矩形）
+                    const mainRegion = {
+                        id: 'main-region',
+                        name: '主站区域',
+                        type: 'region',
+                        symbol: 'rect',
+                        symbolSize: [containerWidth * 0.85, 120],
+                        x: containerWidth / 2,
+                        y: 100,
+                        itemStyle: {
+                            color: 'rgba(84, 112, 198, 0.1)',
+                            borderWidth: 0
+                        },
+                        label: {
+                            show: false
+                        },
+                        fixed: true
+                    };
+
+                    // 主站节点位置（在主站区域内均匀分布）
+                    const mainSpacing = containerWidth * 0.85 / (this.mainSites.length + 1);
+                    const mainY = 100;
+
+                    this.mainSites.forEach((site, index) => {
+                        site.x = (containerWidth * 0.075) + mainSpacing * (index + 1);
+                        site.y = mainY;
+                    });
+
+                    // 子站节点位置（多行排列）
+                    const subYStart = containerHeight - 150;
+                    const maxPerRow = 6; // 每行最多6个子站
+                    const horizontalSpacing = 150;
+                    const verticalSpacing = 80;
+
+                    this.subSites.forEach((site, index) => {
+                        const row = Math.floor(index / maxPerRow);
+                        const col = index % maxPerRow;
+
+                        // 计算当前行的起始X位置，使子站居中
+                        const rowSubCount = Math.min(maxPerRow, this.subSites.length - row * maxPerRow);
+                        const rowStartX = (containerWidth - (rowSubCount - 1) * horizontalSpacing) / 2;
+
+                        site.x = rowStartX + col * horizontalSpacing;
+                        site.y = subYStart - row * verticalSpacing;
+                    });
+
+                    // 返回包含虚拟主站区域的节点列表
+                    return [mainRegion, ...this.mainSites, ...this.subSites];
+                },
+
+                updateChart() {
+                    // 获取所有节点（包括虚拟的主站区域）
+                    const nodes = this.calculatePositions();
+
+                    // 更新图表数据
+                    this.myChart.setOption({
+                        series: [{
+                            data: nodes,
+                            links: this.connections
+                        }]
+                    });
+                },
+
+                addMainSite() {
+                    if (this.mainSites.length >= 8) {
+                        alert('主站数量已达到上限（8个）');
+                        return;
+                    }
+
+                    const newSite = this.createMainSite();
+                    this.mainSites.push(newSite);
+                    this.updateChart();
+                },
+
+                addSubSite() {
+                    const newSite = this.createSubSite();
+                    this.subSites.push(newSite);
+
+                    // 为新子站创建连接
+                    this.connections.push({
+                        source: 'main-region',
+                        target: newSite.id,
+                        sourceName: '主站区域',
+                        targetName: newSite.name,
+                        active: Math.random() > 0.3
+                    });
+
+                    this.updateChart();
+                },
+
+                addMultipleSubSites(count) {
+                    for (let i = 0; i < count; i++) {
+                        this.addSubSite();
+                    }
+                },
+
+                randomizeConnections() {
+                    // 随机更新连接状态
+                    this.connections.forEach(conn => {
+                        conn.active = Math.random() > 0.3;
+                    });
+
+                    this.updateChart();
+                },
+
+                resetLayout() {
+                    this.updateChart();
+                },
+
+                highlightSite(siteId) {
+                    const nodes = this.calculatePositions();
+                    const index = nodes.findIndex(n => n.id === siteId);
+                    if (index !== -1) {
+                        this.myChart.dispatchAction({
+                            type: 'highlight',
+                            seriesIndex: 0,
+                            dataIndex: index
+                        });
+                    }
+                },
+
+                resetHighlight() {
+                    this.myChart.dispatchAction({
+                        type: 'downplay'
+                    });
+                },
+
+                handleResize() {
+                    if (this.myChart) {
+                        this.myChart.resize();
+                        this.updateChart();
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
